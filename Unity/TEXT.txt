@@ -1,0 +1,1164 @@
+Skip to content
+Chat history
+
+
+You said:
+Buatkan saya kode SECARA TERPISAH untuk tracking 
+pergerakan KEPALA, MATA, MULUT, TANGAN, BADAN
+ChatGPT said:
+Oke, saya bisa buatkan
+
+You said:
+SECARA REAL TIME
+ChatGPT said:
+Siap. Di bawah ini contoh arsitektur REAL‑TIME dan kode TERPISAH untuk Unity + Live2D, dengan asumsi:
+
+Tracking dilakukan di Python (MediaPipe)
+
+Data dikirim via UDP
+
+Unity hanya menerima & menggerakkan Live2D
+
+SETIAP BAGIAN TERPISAH (1 script = 1 fungsi)
+
+🔹 ARSITEKTUR REAL‑TIME
+Python (MediaPipe)
+ ├─ Head tracking
+ ├─ Eye tracking
+ ├─ Mouth tracking
+ ├─ Hand tracking
+ └─ Body tracking
+        ↓ UDP (JSON)
+Unity
+ ├─ UDPReceiver
+ ├─ HeadController.cs
+ ├─ EyeController.cs
+ ├─ MouthController.cs
+ ├─ HandController.cs
+ └─ BodyController.cs
+1️⃣ UDPReceiver (WAJIB, SATU SAJA)
+using UnityEngine;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+
+public class UDPReceiver : MonoBehaviour
+{
+    UdpClient client;
+    public static string data;
+
+    void Start()
+    {
+        client = new UdpClient(5052);
+        client.BeginReceive(Receive, null);
+    }
+
+    void Receive(System.IAsyncResult ar)
+    {
+        IPEndPoint ip = new IPEndPoint(IPAddress.Any, 0);
+        byte[] bytes = client.EndReceive(ar, ref ip);
+        data = Encoding.UTF8.GetString(bytes);
+        client.BeginReceive(Receive, null);
+    }
+}
+2️⃣ HEAD TRACKING (Kepala)
+using UnityEngine;
+using Live2D.Cubism.Core;
+
+public class HeadController : MonoBehaviour
+{
+    public CubismModel model;
+
+    void Update()
+    {
+        if (string.IsNullOrEmpty(UDPReceiver.data)) return;
+
+        var json = JsonUtility.FromJson<HeadData>(UDPReceiver.data);
+
+        model.Parameters.FindById("ParamAngleX").Value = json.headX;
+        model.Parameters.FindById("ParamAngleY").Value = json.headY;
+        model.Parameters.FindById("ParamAngleZ").Value = json.headZ;
+    }
+}
+
+[System.Serializable]
+public class HeadData
+{
+    public float headX;
+    public float headY;
+    public float headZ;
+}
+3️⃣ EYE TRACKING (Mata)
+using UnityEngine;
+using Live2D.Cubism.Core;
+
+public class EyeController : MonoBehaviour
+{
+    public CubismModel model;
+
+    void Update()
+    {
+        if (string.IsNullOrEmpty(UDPReceiver.data)) return;
+
+        var json = JsonUtility.FromJson<EyeData>(UDPReceiver.data);
+
+        model.Parameters.FindById("ParamEyeBallX").Value = json.eyeX;
+        model.Parameters.FindById("ParamEyeBallY").Value = json.eyeY;
+    }
+}
+
+[System.Serializable]
+public class EyeData
+{
+    public float eyeX;
+    public float eyeY;
+}
+4️⃣ MOUTH TRACKING (Mulut)
+using UnityEngine;
+using Live2D.Cubism.Core;
+
+public class MouthController : MonoBehaviour
+{
+    public CubismModel model;
+
+    void Update()
+    {
+        if (string.IsNullOrEmpty(UDPReceiver.data)) return;
+
+        var json = JsonUtility.FromJson<MouthData>(UDPReceiver.data);
+
+        model.Parameters.FindById("ParamMouthOpenY").Value = json.mouthOpen;
+        model.Parameters.FindById("ParamMouthForm").Value = json.mouthForm;
+    }
+}
+
+[System.Serializable]
+public class MouthData
+{
+    public float mouthOpen;
+    public float mouthForm;
+}
+5️⃣ HAND TRACKING (Tangan)
+using UnityEngine;
+using Live2D.Cubism.Core;
+
+public class HandController : MonoBehaviour
+{
+    public CubismModel model;
+
+    void Update()
+    {
+        if (string.IsNullOrEmpty(UDPReceiver.data)) return;
+
+        var json = JsonUtility.FromJson<HandData>(UDPReceiver.data);
+
+        model.Parameters.FindById("ParamArmLA").Value = json.left;
+        model.Parameters.FindById("ParamArmRA").Value = json.right;
+    }
+}
+
+[System.Serializable]
+public class HandData
+{
+    public float left;
+    public float right;
+}
+6️⃣ BODY TRACKING (Badan)
+using UnityEngine;
+using Live2D.Cubism.Core;
+
+public class BodyController : MonoBehaviour
+{
+    public CubismModel model;
+
+    void Update()
+    {
+        if (string.IsNullOrEmpty(UDPReceiver.data)) return;
+
+        var json = JsonUtility.FromJson<BodyData>(UDPReceiver.data);
+
+        model.Parameters.FindById("ParamBodyAngleX").Value = json.bodyX;
+        model.Parameters.FindById("ParamBodyAngleY").Value = json.bodyY;
+    }
+}
+
+[System.Serializable]
+public class BodyData
+{
+    public float bodyX;
+    public float bodyY;
+}
+🔥 FORMAT JSON DARI PYTHON (WAJIB SAMA)
+{
+  "headX": 10,
+  "headY": -5,
+  "headZ": 2,
+  "eyeX": 0.3,
+  "eyeY": -0.2,
+  "mouthOpen": 0.7,
+  "mouthForm": 0.2,
+  "left": 15,
+  "right": -10,
+  "bodyX": 5,
+  "bodyY": -3
+}
+✅ SETUP UNITY
+GameObject kosong → UDPReceiver
+
+Mao (Root Live2D)
+
+Pasang HeadController
+
+Pasang EyeController
+
+Pasang MouthController
+
+Pasang HandController
+
+Pasang BodyController
+
+Drag CubismModel ke semua script
+
+▶ PLAY → ▶ python main.py
+
+Kalau mau:
+
+🔥 MediaPipe full Python
+
+🔥 Auto smoothing (anti patah)
+
+🔥 Blend manual + physics
+
+🔥 Pisah UDP per modul (port berbeda)
+
+tinggal bilang.
+
+You said:
+loh, buat yang di python mana? kok ini aja
+ChatGPT said:
+Ah, benar! Saya baru kasih sisi Unity-nya. Untuk tracking real-time di Python (MediaPipe + UDP), tiap bagian bisa dibuat terpisah juga. Berikut contohnya:
+
+🔹 PERSIAPAN
+Install library:
+
+pip install mediapipe opencv-python numpy
+UDP library sudah bawaan Python (socket).
+
+1️⃣ HEAD TRACKING (kepala)
+import cv2
+import mediapipe as mp
+import socket
+import json
+
+mp_face = mp.solutions.face_mesh
+cap = cv2.VideoCapture(0)
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+addr = ("127.0.0.1", 5052)
+
+with mp_face.FaceMesh(static_image_mode=False) as face_mesh:
+    while True:
+        ret, frame = cap.read()
+        if not ret: continue
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = face_mesh.process(frame_rgb)
+        
+        if results.multi_face_landmarks:
+            lm = results.multi_face_landmarks[0].landmark
+            head_data = {
+                "headX": (lm[10].x - lm[152].x)*100,
+                "headY": (lm[10].y - lm[152].y)*100,
+                "headZ": (lm[10].z - lm[152].z)*100
+            }
+            sock.sendto(json.dumps(head_data).encode(), addr)
+2️⃣ EYE TRACKING (mata)
+import cv2
+import mediapipe as mp
+import socket
+import json
+
+mp_face = mp.solutions.face_mesh
+cap = cv2.VideoCapture(0)
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+addr = ("127.0.0.1", 5052)
+
+with mp_face.FaceMesh(static_image_mode=False) as face_mesh:
+    while True:
+        ret, frame = cap.read()
+        if not ret: continue
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = face_mesh.process(frame_rgb)
+        
+        if results.multi_face_landmarks:
+            lm = results.multi_face_landmarks[0].landmark
+            eye_data = {
+                "eyeX": (lm[33].x + lm[263].x)/2 - 0.5,
+                "eyeY": (lm[33].y + lm[263].y)/2 - 0.5
+            }
+            sock.sendto(json.dumps(eye_data).encode(), addr)
+3️⃣ MOUTH TRACKING (mulut)
+import cv2
+import mediapipe as mp
+import socket
+import json
+
+mp_face = mp.solutions.face_mesh
+cap = cv2.VideoCapture(0)
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+addr = ("127.0.0.1", 5052)
+
+with mp_face.FaceMesh(static_image_mode=False) as face_mesh:
+    while True:
+        ret, frame = cap.read()
+        if not ret: continue
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = face_mesh.process(frame_rgb)
+        
+        if results.multi_face_landmarks:
+            lm = results.multi_face_landmarks[0].landmark
+            mouth_data = {
+                "mouthOpen": lm[13].y - lm[14].y,
+                "mouthForm": lm[78].x - lm[308].x
+            }
+            sock.sendto(json.dumps(mouth_data).encode(), addr)
+4️⃣ HAND TRACKING (tangan)
+import cv2
+import mediapipe as mp
+import socket
+import json
+
+mp_hands = mp.solutions.hands
+cap = cv2.VideoCapture(0)
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+addr = ("127.0.0.1", 5052)
+
+with mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.5) as hands:
+    while True:
+        ret, frame = cap.read()
+        if not ret: continue
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = hands.process(frame_rgb)
+        
+        if results.multi_hand_landmarks:
+            left = results.multi_hand_landmarks[0].landmark[8].x
+            right = results.multi_hand_landmarks[0].landmark[8].y
+            hand_data = {"left": left*100, "right": right*100}
+            sock.sendto(json.dumps(hand_data).encode(), addr)
+5️⃣ BODY TRACKING (pose/badan)
+import cv2
+import mediapipe as mp
+import socket
+import json
+
+mp_pose = mp.solutions.pose
+cap = cv2.VideoCapture(0)
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+addr = ("127.0.0.1", 5052)
+
+with mp_pose.Pose(min_detection_confidence=0.7, min_tracking_confidence=0.5) as pose:
+    while True:
+        ret, frame = cap.read()
+        if not ret: continue
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = pose.process(frame_rgb)
+        
+        if results.pose_landmarks:
+            lm = results.pose_landmarks.landmark
+            body_data = {
+                "bodyX": (lm[11].x + lm[12].x)/2 - 0.5,
+                "bodyY": (lm[11].y + lm[12].y)/2 - 0.5
+            }
+            sock.sendto(json.dumps(body_data).encode(), addr)
+⚠️ Catatan penting:
+
+Semua Python script bisa dijalankan secara terpisah → kirim ke Unity UDPReceiver.
+
+Untuk real-time lebih smooth, bisa pakai threading atau satu script gabungkan semua tracking.
+
+Nilai JSON perlu disesuaikan dengan parameter Live2D di Unity.
+
+Kalau mau, saya bisa buat versi Python 1 script gabungan untuk semua tracking, supaya lebih stabil dan realtime.
+
+Apakah mau saya buatkan versi gabungannya juga?
+
+You said:
+nah jsonnya dimana?
+ChatGPT said:
+Oke, saya jelaskan dengan jelas supaya nggak bingung:
+
+Di contoh Python yang saya kasih, setiap script mengirim data tracking via UDP dalam bentuk JSON string ke Unity. JSON ini dibuat langsung di Python sebelum dikirim.
+
+Contohnya:
+
+1️⃣ Head tracking (Python)
+head_data = {
+    "headX": (lm[10].x - lm[152].x)*100,
+    "headY": (lm[10].y - lm[152].y)*100,
+    "headZ": (lm[10].z - lm[152].z)*100
+}
+sock.sendto(json.dumps(head_data).encode(), addr)
+head_data → dictionary Python
+
+json.dumps(head_data) → ubah dictionary jadi JSON string
+
+sock.sendto(..., addr) → kirim ke Unity melalui UDP
+
+JSON yang dikirim akan terlihat seperti ini di Unity:
+
+{
+  "headX": 12.5,
+  "headY": -5.3,
+  "headZ": 2.1
+}
+2️⃣ Eye tracking (Python)
+eye_data = {
+    "eyeX": (lm[33].x + lm[263].x)/2 - 0.5,
+    "eyeY": (lm[33].y + lm[263].y)/2 - 0.5
+}
+sock.sendto(json.dumps(eye_data).encode(), addr)
+JSON yang dikirim akan seperti ini:
+
+{
+  "eyeX": 0.02,
+  "eyeY": -0.01
+}
+🔹 Intinya
+Setiap script Python mengirim JSON sendiri-sendiri ke UDPReceiver di Unity.
+
+Unity script (misal HeadController.cs) akan membaca UDPReceiver.data, lalu pakai JsonUtility.FromJson<HeadData>() untuk mengekstrak nilai dari JSON.
+
+Kalau mau, saya bisa buatkan contoh JSON gabungan untuk semua tracking: kepala, mata, mulut, tangan, badan → satu JSON supaya lebih mudah di Unity.
+
+Apakah mau saya buatkan versi JSON gabungannya?
+
+You said:
+maksudny di VS code atau Unity
+ChatGPT said:
+Ah, sekarang jelas. Jadi:
+
+JSON itu dibuat dan dikirim oleh Python (VS Code atau editor lain tempat kamu jalankan Python), bukan di Unity.
+
+Unity hanya menerima JSON via UDP menggunakan UDPReceiver dan mengubahnya menjadi parameter Live2D.
+
+Jadi alurnya:
+
+Python (VS Code)
+ ├─ capture kamera & track
+ ├─ buat dict → json.dumps(dict)
+ └─ kirim ke Unity via UDP
+Unity
+ ├─ UDPReceiver membaca data JSON
+ └─ Controller (Head/Eye/Mouth/Hand/Body) mengubah parameter Live2D
+Contoh:
+
+Python di VS Code
+
+import json
+data = {"headX": 10, "headY": -5, "headZ": 2}
+json_string = json.dumps(data)  # Ini yang dikirim ke Unity
+Unity
+
+var json = JsonUtility.FromJson<HeadData>(UDPReceiver.data);
+model.Parameters.FindById("ParamAngleX").Value = json.headX;
+✅ Kesimpulannya:
+
+Buat & kirim JSON di Python (VS Code)
+
+Baca & pakai JSON di Unity
+
+Kalau mau, saya bisa buatkan contoh lengkap satu file Python yang mengirim semua tracking (head, eye, mouth, hand, body) sebagai satu JSON supaya langsung bisa dipakai di Unity.
+
+Apakah mau saya buatkan?
+
+You said:
+bikin full codenya
+ChatGPT said:
+Oke! Saya buatkan versi Python full satu script yang mengirim semua tracking (kepala, mata, mulut, tangan, badan) sekaligus ke Unity dalam satu JSON real-time.
+
+🔹 Full Python Script (VS Code / Python)
+import cv2
+import mediapipe as mp
+import socket
+import json
+
+# ------------------ Setup UDP ------------------
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+addr = ("127.0.0.1", 5052)  # pastikan sama dengan UDPReceiver Unity
+
+# ------------------ Setup MediaPipe ------------------
+mp_face = mp.solutions.face_mesh
+mp_hands = mp.solutions.hands
+mp_pose = mp.solutions.pose
+
+cap = cv2.VideoCapture(0)
+
+face_mesh = mp_face.FaceMesh(static_image_mode=False)
+hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.5)
+pose = mp_pose.Pose(min_detection_confidence=0.7, min_tracking_confidence=0.5)
+
+try:
+    while True:
+        ret, frame = cap.read()
+        if not ret: 
+            continue
+        
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # ---- Face Tracking ----
+        face_results = face_mesh.process(frame_rgb)
+        if face_results.multi_face_landmarks:
+            lm_face = face_results.multi_face_landmarks[0].landmark
+
+            headX = (lm_face[10].x - lm_face[152].x) * 100
+            headY = (lm_face[10].y - lm_face[152].y) * 100
+            headZ = (lm_face[10].z - lm_face[152].z) * 100
+
+            eyeX = ((lm_face[33].x + lm_face[263].x)/2 - 0.5) * 2
+            eyeY = ((lm_face[33].y + lm_face[263].y)/2 - 0.5) * 2
+
+            mouthOpen = lm_face[13].y - lm_face[14].y
+            mouthForm = lm_face[78].x - lm_face[308].x
+        else:
+            headX = headY = headZ = 0
+            eyeX = eyeY = 0
+            mouthOpen = mouthForm = 0
+
+        # ---- Hand Tracking ----
+        hand_results = hands.process(frame_rgb)
+        if hand_results.multi_hand_landmarks:
+            lm_hand = hand_results.multi_hand_landmarks[0].landmark
+            leftHand = lm_hand[8].x * 100
+            rightHand = lm_hand[8].y * 100
+        else:
+            leftHand = rightHand = 0
+
+        # ---- Body Tracking ----
+        pose_results = pose.process(frame_rgb)
+        if pose_results.pose_landmarks:
+            lm_body = pose_results.pose_landmarks.landmark
+            bodyX = ((lm_body[11].x + lm_body[12].x)/2 - 0.5) * 2
+            bodyY = ((lm_body[11].y + lm_body[12].y)/2 - 0.5) * 2
+        else:
+            bodyX = bodyY = 0
+
+        # ---- Gabungkan semua data ke JSON ----
+        data = {
+            "headX": headX,
+            "headY": headY,
+            "headZ": headZ,
+            "eyeX": eyeX,
+            "eyeY": eyeY,
+            "mouthOpen": mouthOpen,
+            "mouthForm": mouthForm,
+            "left": leftHand,
+            "right": rightHand,
+            "bodyX": bodyX,
+            "bodyY": bodyY
+        }
+
+        # ---- Kirim ke Unity ----
+        sock.sendto(json.dumps(data).encode(), addr)
+
+finally:
+    cap.release()
+    face_mesh.close()
+    hands.close()
+    pose.close()
+🔹 Cara Pakai
+Jalankan Unity → pasang UDPReceiver + controller script (Head, Eye, Mouth, Hand, Body).
+
+Jalankan Python script ini di VS Code / terminal.
+
+Unity akan menerima JSON secara real-time dan update Live2D.
+
+Kalau mau, saya bisa buatkan versi Python dengan smoothing supaya gerakan kepala, mata, mulut, tangan, dan badan tidak patah-patah saat real-time.
+
+Apakah mau saya buatkan versi smoothing-nya juga?
+
+You said:
+{
+  "headX": 10,
+  "headY": -5,
+  "headZ": 2,
+  "eyeX": 0.3,
+  "eyeY": -0.2,
+  "mouthOpen": 0.7,
+  "mouthForm": 0.2,
+  "left": 15,
+  "right": -10,
+  "bodyX": 5,
+  "bodyY": -3
+}
+
+ini bikin model.json gitu?
+ChatGPT said:
+Betul! JSON yang kamu tulis itu bisa dijadikan file model.json, tapi fungsinya hanya sebagai contoh/placeholder data statis.
+
+Penjelasannya:
+
+1️⃣ Buat file model.json
+Buka VS Code atau editor teks lain.
+
+Buat file baru → beri nama model.json.
+
+Isi dengan:
+
+{
+  "headX": 10,
+  "headY": -5,
+  "headZ": 2,
+  "eyeX": 0.3,
+  "eyeY": -0.2,
+  "mouthOpen": 0.7,
+  "mouthForm": 0.2,
+  "left": 15,
+  "right": -10,
+  "bodyX": 5,
+  "bodyY": -3
+}
+Simpan.
+
+2️⃣ Kegunaan
+Untuk testing di Unity sebelum Python tracking real-time jalan.
+
+Di Unity, kamu bisa baca file JSON dan update parameter Live2D:
+
+string jsonText = File.ReadAllText("model.json");
+var data = JsonUtility.FromJson<FullData>(jsonText);
+
+model.Parameters.FindById("ParamAngleX").Value = data.headX;
+// dst untuk head, eye, mouth, hand, body
+3️⃣ Catatan
+Kalau mau real-time, JSON tidak perlu disimpan di file → langsung dikirim via UDP dari Python (contoh script full sebelumnya).
+
+File model.json biasanya dipakai untuk:
+
+Simulasi data
+
+Debug parameter
+
+Atau preset pose
+
+Kalau mau, saya bisa buatkan contoh script Unity yang bisa baca model.json untuk semua parameter head, eye, mouth, hand, body supaya langsung update model tanpa Python.
+
+Apakah mau saya buatkan itu juga?
+
+You said:
+nah itu yang di UNITY saya isi semua di script?
+ChatGPT said:
+Iya, di Unity kamu bisa langsung buat satu script untuk semua parameter dan isi semua dari JSON, tanpa harus pisah-pisah script. Jadi alurnya seperti ini:
+
+1️⃣ Buat Script C# (misal FullModelController.cs)
+using UnityEngine;
+using Live2D.Cubism.Core;
+using System.IO;
+
+[System.Serializable]
+public class FullData
+{
+    public float headX;
+    public float headY;
+    public float headZ;
+    public float eyeX;
+    public float eyeY;
+    public float mouthOpen;
+    public float mouthForm;
+    public float left;
+    public float right;
+    public float bodyX;
+    public float bodyY;
+}
+
+public class FullModelController : MonoBehaviour
+{
+    public CubismModel model;
+    public string jsonFile = "model.json"; // letak file JSON di Assets/StreamingAssets
+
+    void Start()
+    {
+        string path = Path.Combine(Application.streamingAssetsPath, jsonFile);
+        if (File.Exists(path))
+        {
+            string jsonText = File.ReadAllText(path);
+            FullData data = JsonUtility.FromJson<FullData>(jsonText);
+
+            // Head
+            model.Parameters.FindById("ParamAngleX").Value = data.headX;
+            model.Parameters.FindById("ParamAngleY").Value = data.headY;
+            model.Parameters.FindById("ParamAngleZ").Value = data.headZ;
+
+            // Eye
+            model.Parameters.FindById("ParamEyeBallX").Value = data.eyeX;
+            model.Parameters.FindById("ParamEyeBallY").Value = data.eyeY;
+
+            // Mouth
+            model.Parameters.FindById("ParamMouthOpenY").Value = data.mouthOpen;
+            model.Parameters.FindById("ParamMouthForm").Value = data.mouthForm;
+
+            // Hand
+            model.Parameters.FindById("ParamArmLA").Value = data.left;
+            model.Parameters.FindById("ParamArmRA").Value = data.right;
+
+            // Body
+            model.Parameters.FindById("ParamBodyAngleX").Value = data.bodyX;
+            model.Parameters.FindById("ParamBodyAngleY").Value = data.bodyY;
+        }
+        else
+        {
+            Debug.LogError("File JSON tidak ditemukan: " + path);
+        }
+    }
+}
+2️⃣ Cara pakai
+Masukkan file model.json ke Assets/StreamingAssets/.
+
+Pasang script FullModelController ke Root Live2D model.
+
+Drag CubismModel ke field model.
+
+▶ Play → model akan otomatis update sesuai data JSON.
+
+✅ Dengan cara ini:
+
+Kamu tidak perlu bikin script terpisah untuk head, eye, mouth, hand, body.
+
+Bisa langsung testing pose statis dari file JSON sebelum pakai Python real-time.
+
+Kalau mau, saya bisa buatkan versi gabungan UDPReceiver + FullModelController supaya Python real-time JSON langsung update semua parameter Live2D.
+
+Apakah mau saya buatkan versi itu juga?
+
+You said:
+berarti bikin file baru?
+ChatGPT said:
+Iya, betul. Untuk cara yang saya jelaskan tadi, kamu perlu bikin file baru di Unity:
+
+1️⃣ File JSON
+Buat file baru bernama model.json.
+
+Letakkan di folder:
+
+Assets/StreamingAssets/model.json
+(Kalau folder StreamingAssets belum ada, bikin dulu).
+
+Isi file dengan data contoh:
+
+{
+  "headX": 10,
+  "headY": -5,
+  "headZ": 2,
+  "eyeX": 0.3,
+  "eyeY": -0.2,
+  "mouthOpen": 0.7,
+  "mouthForm": 0.2,
+  "left": 15,
+  "right": -10,
+  "bodyX": 5,
+  "bodyY": -3
+}
+2️⃣ Script C#
+Buat file baru di Unity → misal FullModelController.cs.
+
+Copy paste script FullModelController yang saya buat sebelumnya.
+
+Pasang script ke Root Live2D Model dan drag CubismModel ke field model.
+
+Setelah itu, saat Play, model akan otomatis membaca file JSON dan mengubah semua parameter.
+
+💡 Catatan:
+
+File JSON digunakan untuk testing statis.
+
+Kalau mau real-time tracking, nanti JSON dibuat & dikirim langsung oleh Python via UDP, dan script C# akan membaca dari UDPReceiver.data bukan file.
+
+Kalau mau, saya bisa bikin versi script Unity untuk real-time Python UDP supaya tidak perlu file JSON lagi dan semua parameter langsung update live.
+
+Apakah mau saya buatkan versi itu?
+
+You said:
+{
+  "headX": 10,
+  "headY": -5,
+  "headZ": 2,
+  "eyeX": 0.3,
+  "eyeY": -0.2,
+  "mouthOpen": 0.7,
+  "mouthForm": 0.2,
+  "left": 15,
+  "right": -10,
+  "bodyX": 5,
+  "bodyY": -3
+}
+
+ini taro di vscode atau unity?
+ChatGPT said:
+JSON yang kamu tulis itu ditaruh di VS Code (atau editor teks lain) untuk membuat file model.json.
+
+Langkahnya:
+
+Buka VS Code → buat file baru → beri nama model.json.
+
+Paste isi JSON itu ke file tersebut.
+
+Simpan file.
+
+Letakkan file model.json di folder Assets/StreamingAssets/ di project Unity.
+
+Jika folder StreamingAssets belum ada, buat dulu.
+
+Unity nanti akan membaca file JSON ini untuk update parameter Live2D.
+
+Jadi JSON dibuat dan diedit di VS Code, Unity hanya membacanya lewat script C#.
+
+Kalau mau, bisa saya jelaskan sekalian cara setup Unity agar langsung pakai file JSON itu.
+
+You said:
+GameObject (named 'ParamAngleX') references runtime script in scene file. Fixing!
+GameObject (named 'Mao') references runtime script in scene file. Fixing!
+The class named 'FullData' is not derived from MonoBehaviour or ScriptableObject!
+The class named 'Live2D.Cubism.Editor.CubismAssetProcessor' is not derived from MonoBehaviour or ScriptableObject!
+The class named 'FullData' is not derived from MonoBehaviour or ScriptableObject!
+GameObject (named 'ParamAngleX') references runtime script in scene file. Fixing!
+The class named 'FullData' is not derived from MonoBehaviour or ScriptableObject!
+GameObject (named 'Mao') references runtime script in scene file. Fixing!
+The class named 'FullData' is not derived from MonoBehaviour or ScriptableObject!
+ChatGPT said:
+Oke, error yang muncul ini sangat umum ketika kita salah memasang class di Unity. Mari kita bahas satu-satu dan perbaiki:
+
+1️⃣ Penyebab error utama
+FullData bukan MonoBehaviour atau ScriptableObject
+
+FullData hanya class data murni untuk JSON → tidak boleh dipasang langsung ke GameObject.
+
+Jika kamu drag script yang berisi FullData ke GameObject, Unity akan error.
+
+GameObject references runtime script in scene file
+
+Biasanya muncul karena kamu mencoba attach class yang bukan MonoBehaviour ke GameObject.
+
+Contohnya: FullData atau Live2D.Cubism.Editor.CubismAssetProcessor.
+
+Live2D.Cubism.Editor.CubismAssetProcessor
+
+Ini editor-only class, tidak bisa dijalankan di runtime → jangan attach ke GameObject.
+
+2️⃣ Cara memperbaiki
+Pisahkan class data dan MonoBehaviour
+
+Script FullData hanya class untuk JSON, tidak perlu attach ke GameObject.
+
+Script FullModelController → baru attach ke GameObject (misal Root Live2D “Mao”).
+
+// FullData.cs
+[System.Serializable]
+public class FullData
+{
+    public float headX;
+    public float headY;
+    public float headZ;
+    public float eyeX;
+    public float eyeY;
+    public float mouthOpen;
+    public float mouthForm;
+    public float left;
+    public float right;
+    public float bodyX;
+    public float bodyY;
+}
+// FullModelController.cs
+using UnityEngine;
+using Live2D.Cubism.Core;
+using System.IO;
+
+public class FullModelController : MonoBehaviour
+{
+    public CubismModel model;
+    public string jsonFile = "model.json"; // letak file JSON di Assets/StreamingAssets
+
+    void Start()
+    {
+        string path = Path.Combine(Application.streamingAssetsPath, jsonFile);
+        if (File.Exists(path))
+        {
+            string jsonText = File.ReadAllText(path);
+            FullData data = JsonUtility.FromJson<FullData>(jsonText);
+
+            model.Parameters.FindById("ParamAngleX").Value = data.headX;
+            model.Parameters.FindById("ParamAngleY").Value = data.headY;
+            model.Parameters.FindById("ParamAngleZ").Value = data.headZ;
+
+            model.Parameters.FindById("ParamEyeBallX").Value = data.eyeX;
+            model.Parameters.FindById("ParamEyeBallY").Value = data.eyeY;
+
+            model.Parameters.FindById("ParamMouthOpenY").Value = data.mouthOpen;
+            model.Parameters.FindById("ParamMouthForm").Value = data.mouthForm;
+
+            model.Parameters.FindById("ParamArmLA").Value = data.left;
+            model.Parameters.FindById("ParamArmRA").Value = data.right;
+
+            model.Parameters.FindById("ParamBodyAngleX").Value = data.bodyX;
+            model.Parameters.FindById("ParamBodyAngleY").Value = data.bodyY;
+        }
+        else
+        {
+            Debug.LogError("File JSON tidak ditemukan: " + path);
+        }
+    }
+}
+Attach hanya FullModelController ke GameObject Root Live2D (Mao)
+
+Jangan attach FullData atau CubismAssetProcessor.
+
+Hapus semua references error di scene
+
+Buka GameObject yang error (ParamAngleX, Mao) → lihat inspector → jika ada script merah → klik “Remove Component”.
+
+✅ Setelah ini:
+
+Unity tidak akan lagi complain tentang FullData atau CubismAssetProcessor.
+
+Script FullModelController akan membaca JSON dan update model.
+
+Kalau mau, saya bisa buatkan versi script FullModelController untuk real-time UDP dari Python supaya langsung update Live2D tanpa JSON statis, supaya lebih smooth dan bebas error.
+
+Apakah mau saya buatkan versi itu?
+
+You said:
+nambah file dong?
+ChatGPT said:
+Iya, betul. Untuk setup yang benar di Unity, kamu harus bikin beberapa file supaya tidak terjadi error seperti yang tadi muncul. Berikut struktur file yang sebaiknya dibuat:
+
+1️⃣ FullData.cs
+Hanya class data untuk JSON
+
+Tidak boleh attach ke GameObject
+
+Contoh isi:
+
+[System.Serializable]
+public class FullData
+{
+    public float headX;
+    public float headY;
+    public float headZ;
+    public float eyeX;
+    public float eyeY;
+    public float mouthOpen;
+    public float mouthForm;
+    public float left;
+    public float right;
+    public float bodyX;
+    public float bodyY;
+}
+2️⃣ FullModelController.cs
+Ini MonoBehaviour → attach ke Root Live2D model (misal Mao)
+
+Script ini membaca JSON dan update model
+
+using UnityEngine;
+using Live2D.Cubism.Core;
+using System.IO;
+
+public class FullModelController : MonoBehaviour
+{
+    public CubismModel model;
+    public string jsonFile = "model.json"; // letak file JSON di Assets/StreamingAssets
+
+    void Start()
+    {
+        string path = Path.Combine(Application.streamingAssetsPath, jsonFile);
+        if (File.Exists(path))
+        {
+            string jsonText = File.ReadAllText(path);
+            FullData data = JsonUtility.FromJson<FullData>(jsonText);
+
+            // Head
+            model.Parameters.FindById("ParamAngleX").Value = data.headX;
+            model.Parameters.FindById("ParamAngleY").Value = data.headY;
+            model.Parameters.FindById("ParamAngleZ").Value = data.headZ;
+
+            // Eye
+            model.Parameters.FindById("ParamEyeBallX").Value = data.eyeX;
+            model.Parameters.FindById("ParamEyeBallY").Value = data.eyeY;
+
+            // Mouth
+            model.Parameters.FindById("ParamMouthOpenY").Value = data.mouthOpen;
+            model.Parameters.FindById("ParamMouthForm").Value = data.mouthForm;
+
+            // Hand
+            model.Parameters.FindById("ParamArmLA").Value = data.left;
+            model.Parameters.FindById("ParamArmRA").Value = data.right;
+
+            // Body
+            model.Parameters.FindById("ParamBodyAngleX").Value = data.bodyX;
+            model.Parameters.FindById("ParamBodyAngleY").Value = data.bodyY;
+        }
+        else
+        {
+            Debug.LogError("File JSON tidak ditemukan: " + path);
+        }
+    }
+}
+3️⃣ model.json
+File JSON ini bisa dibuat di VS Code
+
+Letakkan di Assets/StreamingAssets/
+
+Contoh isi:
+
+{
+  "headX": 10,
+  "headY": -5,
+  "headZ": 2,
+  "eyeX": 0.3,
+  "eyeY": -0.2,
+  "mouthOpen": 0.7,
+  "mouthForm": 0.2,
+  "left": 15,
+  "right": -10,
+  "bodyX": 5,
+  "bodyY": -3
+}
+✅ Kesimpulan setup
+
+FullData.cs → class JSON (tidak attach ke GameObject)
+
+FullModelController.cs → attach ke Root Live2D (Mao)
+
+model.json → letak di Assets/StreamingAssets
+
+Pastikan hapus semua script merah / error di scene (misal FullData atau CubismAssetProcessor)
+
+Kalau mau, saya bisa buatkan versi full script real-time UDP yang tidak perlu file JSON lagi, jadi Python bisa langsung update Live2D di Unity.
+
+Apakah mau saya buatkan versi itu?
+
+You said:
+NullReferenceException: Object reference not set to an instance of an object
+FullModelController.Start () (at Assets/Scripts/Live2DController.cs:19)
+NullReferenceException: Object reference not set to an instance of an object
+FullModelController.Start () (at Assets/Scripts/Live2DController.cs:28)
+ChatGPT said:
+Ah, ini error NullReferenceException di Unity artinya ada variabel yang belum diassign tapi dipakai di script. Dari pesanmu, error muncul di FullModelController.Start(). Biasanya penyebabnya:
+
+1️⃣ Penyebab paling umum
+model belum diassign di Inspector
+
+Script FullModelController punya field:
+
+public CubismModel model;
+Jika kamu lupa drag Live2D CubismModel dari hierarchy ke field model → NullReferenceException.
+
+File JSON tidak ditemukan
+
+Kalau File.ReadAllText(path) gagal, kadang juga bisa muncul error ketika coba parsing atau assign parameter.
+
+Parameter Live2D salah ID
+
+Misal ParamAngleX di FindById("ParamAngleX") tidak ada di model → FindById mengembalikan null → saat assign .Value → NullReferenceException.
+
+2️⃣ Cara memperbaiki step-by-step
+Assign model di Inspector
+
+Klik GameObject (misal Mao) → lihat script FullModelController → drag CubismModel dari hierarchy ke field model.
+
+Cek JSON file
+
+Letakkan model.json di:
+
+Assets/StreamingAssets/model.json
+Pastikan jsonFile = "model.json" di script.
+
+Bisa test dengan Debug:
+
+if(!File.Exists(path))
+    Debug.LogError("File JSON tidak ditemukan: " + path);
+Cek parameter Live2D
+
+Pastikan parameter yang dipanggil FindById("ParamAngleX"), ParamEyeBallX, dll benar-benar ada di CubismModel.
+
+Jika salah ketik → akan return null.
+
+Debugging
+
+Tambahkan debug sebelum assign:
+
+var param = model.Parameters.FindById("ParamAngleX");
+if(param != null) param.Value = data.headX;
+else Debug.LogError("ParamAngleX tidak ditemukan!");
+💡 Ringkasnya:
+
+NullReferenceException = sesuatu yang null tapi dipakai.
+
+Biasanya karena: model belum diassign atau parameter tidak ada di Live2D model.
+
+Kalau mau, saya bisa buatkan versi FullModelController yang lebih aman:
+
+Cek semua parameter null sebelum assign
+
+Bisa langsung dipakai untuk JSON atau UDP tanpa crash.
+
+Apakah mau saya buatkan versi aman itu?
+
+You said:
+percakapan ini semua bisa gua bawa ke email sebelah gk? mau upload zip
+ChatGPT said:
+Bisa banget, tapi ada beberapa hal yang perlu kamu perhatikan supaya percakapan ini bisa “dipindahkan” dan dipakai di email:
+
+1️⃣ Cara bawa percakapan ke email
+Salin teks percakapan
+
+Pilih semua teks percakapan ini → copy → paste ke file teks (.txt) atau dokumen Word (.docx).
+
+Bisa juga buat folder struktur proyek dan taruh file teks di sana.
+
+Siapkan file tambahan
+
+Script Python (.py)
+
+Script Unity (.cs)
+
+File JSON (model.json)
+→ Semua bisa masuk ke folder proyek.
+
+Zip folder proyek
+
+Masukkan semua file:
+
+MyLive2DProject/
+  ├─ Scripts/
+      ├─ FullData.cs
+      ├─ FullModelController.cs
+  ├─ Python/
+      ├─ full_tracking.py
+  ├─ model.json
+  └─ percakapan.txt
+Klik kanan → Compress/Send to zip → hasilnya .zip.
+
+Kirim via email
+
+Attach file .zip ke email.
+
+Bisa ditulis catatan singkat di body email, misal: “Berikut folder proyek Live2D + percakapan referensi dari ChatGPT.”
+
+2️⃣ Tips
+Kalau file .zip terlalu besar → bisa pisahkan script Python dan Unity ke zip terpisah.
+
+Pastikan file JSON & script path sesuai supaya mudah dijalankan penerima.
+
+Bisa sertakan README singkat: “cara jalankan Python → Unity → lihat hasil Live2D.”
+
+Kalau mau, saya bisa buatkan struktur folder zip siap kirim lengkap dengan nama file yang rapi dan semua script + JSON + percakapan di dalamnya.
+
+Apakah mau saya buatkan versi itu?
+
+
+
+
+No file chosenNo file chosen
+ChatGPT can make mistakes. Check important info. See Cookie Preferences.
+ChatGPT says: Bisa banget, tapi ada beberapa hal yang perlu kamu perhatikan supaya percakapan ini bisa “dipindahkan” dan dipakai di email: --- ### 1️⃣ Cara bawa percakapan ke email 1. **Salin teks percakapan** - Pilih semua teks percakapan ini → copy → paste ke file teks (`.txt`) atau dokumen Word (`.docx`). - Bisa juga buat folder **struktur proyek** dan taruh file teks di sana. 2. **Siapkan file tambahan** - Script Python (`.py`) - Script Unity (`.cs`) - File JSON (`model.json`) → Semua bisa masuk ke folder proyek. 3. **Zip folder proyek** - Masukkan semua file: ``` MyLive2DProject/ ├─ Scripts/ ├─ FullData.cs ├─ FullModelController.cs ├─ Python/ ├─ full_tracking.py ├─ model.json └─ percakapan.txt ``` - Klik kanan → **Compress/Send to zip** → hasilnya `.zip`. 4. **Kirim via email** - Attach file `.zip` ke email. - Bisa ditulis catatan singkat di body email, misal: “Berikut folder proyek Live2D + percakapan referensi dari ChatGPT.” --- ### 2️⃣ Tips - Kalau file `.zip` terlalu besar → bisa pisahkan script Python dan Unity ke zip terpisah. - Pastikan file **JSON & script path sesuai** supaya mudah dijalankan penerima. - Bisa sertakan README singkat: “cara jalankan Python → Unity → lihat hasil Live2D.” --- Kalau mau, saya bisa buatkan **struktur folder zip siap kirim** lengkap dengan nama file yang rapi dan semua script + JSON + percakapan di dalamnya. Apakah mau saya buatkan versi itu?
