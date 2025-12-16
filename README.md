@@ -37,24 +37,27 @@ Project ini dibuat untuk **kepentingan akademik / tugas perkuliahan**.
 
 ---
 
-## Struktur Folder
-├── Model/ # Model Live2D 
-│ ├── Scripts/
-│ ├── runtime/
-│ ├── mao_pro_t06.can3
-│ └── ReadMe.txt
+Struktur Folder
+
+ProjectRoot/
+├─ Model/                         # Model Live2D
+│  ├─ Scripts/                    # Script Unity
+│  ├─ runtime/                    # Runtime Cubism
+│  ├─ mao_pro_t06.can3            # File model Live2D
+│  └─ ReadMe.txt
 │
-├── Python/ # Sistem tracking
-│ ├── Body_tracking.py
-│ ├── Eye_tracking.py
-│ ├── Hand_tracking.py
-│ ├── Head_tracking.py
-│ ├── Mouth_tracking.py
-│ ├── UDPSender.py
-│ ├── main.py
-│ └── requirement.txt
+├─ Python/                        # Sistem tracking (Python)
+│  ├─ Body_tracking.py
+│  ├─ Eye_tracking.py
+│  ├─ Hand_tracking.py
+│  ├─ Head_tracking.py
+│  ├─ Mouth_tracking.py
+│  ├─ UDPSender.py
+│  ├─ main.py
+│  └─ requirement.txt
 │
-└── README.md
+└─ README.md
+
 
 ---
 \
