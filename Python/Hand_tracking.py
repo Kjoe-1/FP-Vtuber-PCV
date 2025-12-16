@@ -1,21 +1,27 @@
 def track_hand(results):
-    left = 0.0
-    right = 0.0
+    armL = 0
+    armR = 0
 
     if not results.multi_hand_landmarks:
-        return left, right
+        return armL, armR
 
     for i, hand in enumerate(results.multi_hand_landmarks):
         lm = hand.landmark
-
-        # Gerak tangan dari pergelangan (stabil)
-        x = (lm[0].x - 0.5) * 60   # RANGE LIVE2D
-
         label = results.multi_handedness[i].classification[0].label
 
-        if label == "Left":
-            left = x
-        else:
-            right = x
+        wrist_y = lm[0].y
 
-    return left, right
+        # gesture sederhana & stabil
+        if wrist_y < 0.35:
+            v = 25    # angkat
+        elif wrist_y < 0.45:
+            v = 15    # setengah
+        else:
+            v = 0     # turun
+
+        if label == "Left":
+            armL = v
+        else:
+            armR = v
+
+    return armL, armR
