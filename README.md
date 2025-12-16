@@ -64,7 +64,7 @@ Project ini dibuat untuk **kepentingan akademik / tugas perkuliahan**.
 2. Install dependency:
 ```bash
 pip install -r requirement.txt
-
+```
 ---
 
 ### Unity
