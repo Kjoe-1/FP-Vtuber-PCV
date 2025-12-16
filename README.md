@@ -38,7 +38,7 @@ Project ini dibuat untuk **kepentingan akademik / tugas perkuliahan**.
 ---
 
 Struktur Folder
-
+``` bash
 ProjectRoot/
 │
 ├── Model/
@@ -58,7 +58,7 @@ ProjectRoot/
 │   └── requirement.txt
 │
 └── README.md
-
+```
 
 ---
 \
