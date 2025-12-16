@@ -57,6 +57,13 @@ Project ini dibuat untuk **kepentingan akademik / tugas perkuliahan**.
 └── README.md
 
 ---
+\
+## Cara Menjalankan
+### Python
+1. Pastikan webcam aktif
+2. Install dependency:
+```bash
+pip install -r requirement.txt
 
 ---
 
@@ -76,9 +83,3 @@ Saat Python dan Unity berjalan bersamaan, karakter Live2D akan mengikuti:
 
 Bagian ini merupakan demo langsung dari sistem tracking yang dibuat.
 
-## Cara Menjalankan
-### Python
-1. Pastikan webcam aktif
-2. Install dependency:
-```bash
-pip install -r requirement.txt
