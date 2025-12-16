@@ -9,7 +9,6 @@ Python digunakan untuk melakukan tracking pergerakan pengguna melalui webcam,
 sedangkan Unity digunakan untuk menampilkan dan menggerakkan karakter Live2D  
 secara real-time berdasarkan data tracking yang diterima.
 
-Project ini dibuat untuk **kepentingan akademik / tugas perkuliahan**.
 
 ---
 
